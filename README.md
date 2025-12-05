@@ -2,9 +2,15 @@
 
 Extension Chrome avancée pour extraire une section complète d'une page web (HTML, CSS, JS) et la préparer pour une intégration dans un thème Shopify.
 
+## ✨ Nouveauté v1.1.0 : Mode Sélecteur Visuel
+
+**Plus besoin de connaître les sélecteurs CSS !** Clique directement sur la section que tu veux copier.
+
 ## Objectif
 
-- Permettre de cibler n'importe quelle section d'une page via un sélecteur CSS.
+- Permettre de cibler n'importe quelle section d'une page via :
+  - **Mode Visuel** : clique sur la section pour la sélectionner (recommandé)
+  - **Mode Manuel** : entre un sélecteur CSS si tu le connais déjà
 - Extraire :
   - le HTML complet de la section (outerHTML)
   - les styles CSS associés (inline + règles de stylesheets accessibles)
@@ -13,125 +19,174 @@ Extension Chrome avancée pour extraire une section complète d'une page web (HT
 
 ## Installation locale dans Chrome (mode développeur)
 
-- Cloner le dépôt :
-  - `git clone https://github.com/Youni-G5/section-scraper-extension.git`
-  - `cd section-scraper-extension`
-- Ouvrir Chrome et aller dans :
-  - `chrome://extensions/`
-- Activer le **Mode développeur** (coin supérieur droit).
-- Cliquer sur **Charger l'extension non empaquetée**.
-- Sélectionner le dossier du projet `section-scraper-extension`.
+1. **Cloner le dépôt :**
+   ```bash
+   git clone https://github.com/Youni-G5/section-scraper-extension.git
+   cd section-scraper-extension
+   ```
+
+2. **Ouvrir Chrome et aller dans :**
+   - `chrome://extensions/`
+
+3. **Activer le Mode développeur** (coin supérieur droit)
+
+4. **Cliquer sur "Charger l'extension non empaquetée"**
+
+5. **Sélectionner le dossier du projet** `section-scraper-extension`
 
 L'icône de l'extension apparaît ensuite dans la barre d'outils Chrome.
 
-## Utilisation
+## 🚀 Utilisation
 
-- Aller sur la page web contenant la section à copier.
-- Clic sur l'icône de l'extension pour ouvrir le popup.
-- Dans le champ **Sélecteur CSS**, renseigner un sélecteur valide correspondant à la section à extraire, par exemple :
-  - `.product-section`
-  - `#hero`
-  - `[data-section="banner"]`
-- Optionnel : ajuster les options disponibles :
-  - **Télécharger les images locales** : convertit les chemins d'images relatifs en URLs absolues pour faciliter l'import.
-  - **Inclure tous les styles calculés** : ajoute les styles inline de l'élément (attribut `style`) dans le CSS extrait.
-  - **Extraire le JavaScript associé** : récupère les scripts inline de la section et ajoute des notes pour les scripts globaux.
-- Cliquer sur **« Extraire la Section »**.
-- Un fichier ZIP est généré et téléchargé contenant :
-  - `section.html`
-  - `section.css`
-  - `section.js`
+### Mode Visuel (Recommandé)
+
+1. Va sur la page web contenant la section à copier
+2. Clique sur l'icône de l'extension
+3. Dans le popup, reste sur **"Mode Visuel"** (activé par défaut)
+4. Clique sur **"🎯 Sélectionner une Section"**
+5. La page s'affiche avec :
+   - Un badge bleu en haut : "🎯 Clique sur la section à copier"
+   - Les sections se surlignent en bleu au survol de ta souris
+6. **Clique sur la section** que tu veux extraire
+7. Le popup se rouvre automatiquement avec la section sélectionnée
+8. Ajuste les options si nécessaire :
+   - ✅ Télécharger les images locales
+   - ✅ Inclure tous les styles calculés
+   - ✅ Extraire le JavaScript associé
+9. Clique sur **"⬇️ Extraire la Section"**
+10. Le ZIP se télécharge automatiquement
+
+**Astuce :** Appuie sur **ESC** pour annuler le mode sélection visuelle.
+
+### Mode Manuel (Avancé)
+
+1. Va sur la page web contenant la section à copier
+2. Clique sur l'icône de l'extension
+3. Clique sur **"⌨️ Mode Manuel"**
+4. Entre un sélecteur CSS dans le champ, par exemple :
+   - `.product-section`
+   - `#hero`
+   - `[data-section="banner"]`
+   - `main > section:nth-child(2)`
+5. Clique sur **"⬇️ Extraire la Section"**
+
+**Comment trouver un sélecteur CSS manuellement :**
+- Clic droit sur la section > "Inspecter"
+- Dans les DevTools, clic droit sur l'élément HTML
+- "Copy" > "Copy selector"
 
 ## Structure du projet
 
-- `manifest.json` : configuration Manifest V3 de l'extension.
-- `popup.html` : interface utilisateur du popup.
-- `style.css` : styles du popup.
-- `popup.js` : logique du popup, communication avec le content script et le background.
-- `content.js` : script injecté dans la page, responsable de l'extraction HTML/CSS/JS.
-- `background.js` : service worker qui génère le ZIP et déclenche le téléchargement.
-- `icons/` : icônes de l'extension (à compléter si besoin).
+```
+section-scraper-extension/
+├── manifest.json          # Configuration Manifest V3
+├── popup.html             # Interface utilisateur du popup
+├── popup.js               # Logique du popup
+├── style.css              # Styles du popup
+├── content.js             # Extraction HTML/CSS/JS
+├── visual-selector.js     # Mode sélecteur visuel
+├── background.js          # Génération du ZIP
+├── icons/                 # Icônes (optionnel)
+└── README.md
+```
 
 ## Fonctionnement technique
 
-- **popup.js**
-  - Lit le sélecteur CSS et les options saisies par l'utilisateur.
-  - Envoie un message au `content.js` dans l'onglet actif (`SCRAPE_SECTION`).
-  - En cas de succès, envoie les données au `background.js` (`CREATE_ZIP_AND_DOWNLOAD`).
+### Mode Visuel
 
-- **content.js**
-  - Récupère l'élément ciblé avec `document.querySelector(selector)`.
+1. **popup.js** injecte `visual-selector.js` dans la page active
+2. **visual-selector.js** :
+   - Crée un overlay bleu translucide qui suit la souris
+   - Affiche un badge d'instructions en haut de la page
+   - Au survol, met en surbrillance l'élément sous le curseur
+   - Au clic, génère automatiquement un sélecteur CSS optimal :
+     - Privilégie les ID uniques
+     - Utilise les classes si uniques
+     - Vérifie les data-attributes
+     - Construit un chemin avec nth-of-type si nécessaire
+   - Sauvegarde le sélecteur dans `chrome.storage.local`
+3. **popup.js** récupère le sélecteur et lance l'extraction
+
+### Extraction de Section
+
+- **content.js** :
+  - Récupère l'élément ciblé avec `document.querySelector(selector)`
   - Extrait :
-    - `outerHTML` de la section.
-    - CSS associé via :
-      - styles inline (attribut `style`) si option activée.
-      - règles des feuilles de style accessibles (`document.styleSheets`) qui matchent l'élément ou ses descendants.
-    - JavaScript :
-      - scripts inline à l'intérieur de la section.
-      - notes explicatives pour compléter les scripts globaux (fichiers JS externes du site).
-  - Réécrit les chemins d'images en URLs absolues et stocke aussi le chemin original dans `data-original-src`.
+    - `outerHTML` de la section
+    - CSS associé via styles inline + règles de `document.styleSheets`
+    - JavaScript inline + notes pour scripts globaux
+  - Réécrit les chemins d'images en URLs absolues
 
-- **background.js**
+- **background.js** :
   - Construit un ZIP minimal contenant :
-    - `section.html` avec un commentaire en tête rappelant l'URL d'origine, le sélecteur et des recommandations Shopify.
-    - `section.css` avec un commentaire décrivant les bonnes pratiques d'intégration dans Shopify.
-    - `section.js` avec des commentaires sur l'intégration dans les fichiers JS de thème.
-  - Déclenche le téléchargement du ZIP via l'API `chrome.downloads`.
+    - `section.html` avec commentaires d'origine
+    - `section.css` avec recommandations Shopify
+    - `section.js` avec notes d'intégration
+  - Déclenche le téléchargement via `chrome.downloads`
 
 ## Limites et bonnes pratiques pour Shopify
 
-- **CSS partiel** :
-  - Les styles provenant de feuilles de style cross-origin (CDN, domaines tiers) ne sont pas toujours accessibles depuis `document.styleSheets` (restrictions de sécurité).
-  - Pour ces cas, il peut être nécessaire de copier manuellement des parties de CSS depuis les fichiers originaux.
+### CSS partiel
+- Les styles cross-origin (CDN tiers) ne sont pas toujours accessibles
+- Pour ces cas, copier manuellement depuis les fichiers CSS originaux
 
-- **JavaScript global** :
-  - L'extension récupère les scripts inline présents dans la section mais ne peut pas automatiquement reconstituer toute la logique des fichiers JS globaux.
-  - Pour une intégration propre dans Shopify, il est recommandé de :
-    - Rechercher les références à l'ID ou aux classes de la section dans les fichiers JS du site d'origine.
-    - Reproduire ou adapter ces comportements dans `theme.js` ou un fichier JS global de votre thème Shopify.
+### JavaScript global
+- L'extension récupère uniquement les scripts inline de la section
+- Pour une intégration propre :
+  - Rechercher les références à l'ID/classes dans les JS globaux du site
+  - Adapter dans `theme.js` ou fichiers JS de ton thème
 
-- **Performances et isolation** :
-  - Limiter l'utilisation de sélecteurs trop génériques pour éviter de polluer l'ensemble du thème.
-  - Préfixer les classes ou isoler la section dans un wrapper spécifique si nécessaire.
+### Performances
+- Limiter les sélecteurs trop génériques
+- Préfixer les classes ou isoler dans un wrapper si nécessaire
 
 ## Conseils d'adaptation à Liquid (Shopify)
 
-- **HTML (`section.html`)** :
-  - Transformer la section en section Shopify :
-    - Créer un fichier dans `sections/` (ex : `custom-section.liquid`).
-    - Coller le contenu de `section.html`.
-    - Remplacer les contenus statiques par des variables Liquid (
-      `{{ section.settings.titre }}`, `{{ section.settings.image }}`, etc.).
-  - Utiliser les `schema` de sections pour exposer des réglages dans le customizer.
+### HTML (`section.html`)
+- Créer un fichier dans `sections/` (ex: `custom-section.liquid`)
+- Coller le contenu HTML
+- Remplacer les contenus statiques par des variables Liquid :
+  ```liquid
+  {{ section.settings.titre }}
+  {{ section.settings.image | img_url: 'large' }}
+  ```
+- Ajouter un `schema` pour le customizer
 
-- **CSS (`section.css`)** :
-  - Copier les styles dans :
-    - un fichier dédié (ex : `assets/custom-section.css`), ou
-    - un fichier global (ex : `theme.css`), en prenant soin de limiter la portée des styles à la section.
-  - Nettoyer les règles inutiles ou redondantes et harmoniser avec le design system du thème.
+### CSS (`section.css`)
+- Copier dans `assets/custom-section.css` ou `theme.css`
+- Limiter la portée avec un wrapper ou préfixe de classe
+- Harmoniser avec le design system du thème
 
-- **JS (`section.js`)** :
-  - Intégrer le code dans :
-    - un fichier global (ex : `assets/theme.js`) ou
-    - un fichier dédié aux sections custom.
-  - Initialiser la logique JS sur les événements Shopify pertinents :
-    - `shopify:section:load`
-    - `shopify:section:select`
-    - `DOMContentLoaded` ou équivalents.
+### JS (`section.js`)
+- Intégrer dans `assets/theme.js` ou fichier dédié
+- Initialiser sur les événements Shopify :
+  ```javascript
+  document.addEventListener('shopify:section:load', function(event) {
+    // Initialiser la section
+  });
+  ```
 
-## Personnalisation et extension du projet
+## Améliorations futures possibles
 
-- Remplacer l'implémentation ZIP minimaliste par une bibliothèque dédiée comme JSZip si vous avez besoin de :
-  - compression réelle,
-  - gestion avancée des métadonnées,
-  - compatibilité maximale avec tous les outils d'archive.
-- Ajouter un mode "prévisualisation" dans le popup pour afficher un aperçu du HTML extrait.
-- Ajouter une option pour exporter directement un fichier `.liquid` au lieu d'HTML brut.
+- [ ] Export direct en `.liquid` avec schema JSON
+- [ ] Prévisualisation avant téléchargement
+- [ ] Support multi-sélection (plusieurs sections à la fois)
+- [ ] Détection automatique des frameworks JS (React, Vue, Alpine...)
+- [ ] Intégration directe avec Shopify CLI
 
 ## Avertissement
 
-Cette extension vise à vous faire gagner du temps sur l'extraction technique, mais ne remplace pas :
+Cette extension vise à gagner du temps sur l'extraction technique, mais ne remplace pas :
+- L'analyse manuelle du code
+- Les ajustements pour la performance et structure Shopify
+- Le respect des droits d'auteur et licences des designs copiés
 
-- l'analyse manuelle du code,
-- les ajustements nécessaires pour respecter la structure et la performance de votre thème Shopify,
-- le respect des droits d'auteur et des licences liés aux designs et contenus copiés.
+## Support
+
+Problèmes ? Ouvre une issue sur GitHub : [section-scraper-extension/issues](https://github.com/Youni-G5/section-scraper-extension/issues)
+
+---
+
+**Version actuelle :** 1.1.0  
+**Licence :** MIT  
+**Auteur :** Créé pour les développeurs Shopify
