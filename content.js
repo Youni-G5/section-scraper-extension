@@ -1,4 +1,4 @@
-// content.js - Version améliorée avec extraction complète
+// content.js - CORRIGÉ : Sélecteur CSS invalide fixé
 // Injecté dans chaque page : extrait le HTML, CSS et JS complet pour un sélecteur donné
 
 // Récupère TOUS les styles CSS (inline, internal, external) pour une section
@@ -197,23 +197,40 @@ function extractAllScripts(rootElement) {
     jsParts.push('// Aucun event handler inline détecté\n');
   }
 
-  // 3. Data-attributes potentiellement liés à du JS
+  // 3. Data-attributes potentiellement liés à du JS - FIXÉ ICI
   jsParts.push('// --- Data-attributes détectés (peuvent être utilisés par JS) ---\n');
-  const elementsWithData = rootElement.querySelectorAll('[data-*], [class*="js-"]');
-  if (elementsWithData.length > 0) {
-    const dataAttrs = new Set();
-    elementsWithData.forEach((el) => {
-      for (const attr of el.attributes) {
-        if (attr.name.startsWith('data-') || el.className.includes('js-')) {
-          dataAttrs.add(`${attr.name}: "${attr.value}"`);
-        }
+  
+  // Au lieu de querySelectorAll avec sélecteur invalide, itérer manuellement
+  const allElements = rootElement.querySelectorAll('*');
+  const dataAttrs = new Set();
+  let hasDataAttrs = false;
+  
+  allElements.forEach((el) => {
+    // Vérifier les data-attributes
+    for (const attr of el.attributes) {
+      if (attr.name.startsWith('data-')) {
+        hasDataAttrs = true;
+        dataAttrs.add(`${attr.name}: "${attr.value}"`);
       }
-    });
-    if (dataAttrs.size > 0) {
-      jsParts.push('// Attributs data-* trouvés:');
-      dataAttrs.forEach(attr => jsParts.push(`// - ${attr}`));
-      notes.push('Rechercher dans les fichiers JS du site les références à ces data-attributes');
     }
+    // Vérifier les classes js-*
+    if (el.className && typeof el.className === 'string') {
+      const classes = el.className.split(/\s+/);
+      classes.forEach(cls => {
+        if (cls.startsWith('js-')) {
+          hasDataAttrs = true;
+          dataAttrs.add(`class: "${cls}"`);
+        }
+      });
+    }
+  });
+  
+  if (hasDataAttrs && dataAttrs.size > 0) {
+    jsParts.push('// Attributs data-* et classes js-* trouvés:');
+    dataAttrs.forEach(attr => jsParts.push(`// - ${attr}`));
+    notes.push('Rechercher dans les fichiers JS du site les références à ces data-attributes');
+  } else {
+    jsParts.push('// Aucun data-attribute ou classe js-* détecté');
   }
   jsParts.push('\n');
 
