@@ -14,17 +14,54 @@
     </div>
 
     <div class="content">
-      <div class="input-group">
-        <label for="selector">Sélecteur CSS de la section :</label>
-        <input 
-          type="text" 
-          id="selector" 
-          placeholder="Ex: .product-section, #hero, [data-section='banner']" 
-          autocomplete="off"
-        >
-        <small class="hint">💡 Astuce : Clic droit > Inspecter l'élément pour trouver le sélecteur</small>
+      <!-- MODE DE SÉLECTION -->
+      <div class="mode-selector">
+        <button id="visualModeBtn" class="mode-btn active">
+          <span class="mode-icon">👆</span>
+          <span>Mode Visuel</span>
+        </button>
+        <button id="manualModeBtn" class="mode-btn">
+          <span class="mode-icon">⌨️</span>
+          <span>Mode Manuel</span>
+        </button>
       </div>
 
+      <!-- MODE VISUEL -->
+      <div id="visualMode" class="mode-content">
+        <div class="visual-instructions">
+          <p><strong>👇 Clique sur le bouton ci-dessous, puis sur la section de la page que tu veux copier.</strong></p>
+          <ul>
+            <li>La section sera surlignée en bleu au survol</li>
+            <li>Clique pour sélectionner</li>
+            <li>Le sélecteur CSS sera généré automatiquement</li>
+          </ul>
+        </div>
+        <button id="activatePickerBtn" class="picker-btn">
+          <span class="btn-icon">🎯</span>
+          <span class="btn-text">Sélectionner une Section</span>
+        </button>
+        <div id="selectedInfo" class="selected-info hidden">
+          <div class="info-label">✅ Section sélectionnée :</div>
+          <div id="selectedSelector" class="selected-selector"></div>
+          <button id="clearSelection" class="clear-btn">❌ Annuler</button>
+        </div>
+      </div>
+
+      <!-- MODE MANUEL -->
+      <div id="manualMode" class="mode-content hidden">
+        <div class="input-group">
+          <label for="selector">Sélecteur CSS de la section :</label>
+          <input 
+            type="text" 
+            id="selector" 
+            placeholder="Ex: .product-section, #hero, [data-section='banner']" 
+            autocomplete="off"
+          >
+          <small class="hint">💡 Astuce : Clic droit > Inspecter > Copier le sélecteur</small>
+        </div>
+      </div>
+
+      <!-- OPTIONS -->
       <div class="options">
         <label class="checkbox-label">
           <input type="checkbox" id="includeImages" checked>
@@ -52,7 +89,7 @@
     </div>
 
     <div class="footer">
-      <small>v1.0.0 | Créé pour les développeurs Shopify</small>
+      <small>v1.1.0 | Mode visuel ajouté</small>
     </div>
   </div>
 

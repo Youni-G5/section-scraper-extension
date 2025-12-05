@@ -40,6 +40,148 @@ body {
   padding: 24px 20px;
 }
 
+/* MODE SELECTOR */
+.mode-selector {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  background: #f3f4f6;
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #6b7280;
+}
+
+.mode-btn:hover {
+  background: #e5e7eb;
+}
+
+.mode-btn.active {
+  background: white;
+  color: #667eea;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.mode-icon {
+  font-size: 16px;
+}
+
+/* MODE CONTENT */
+.mode-content {
+  margin-bottom: 20px;
+}
+
+.mode-content.hidden {
+  display: none;
+}
+
+/* VISUAL MODE */
+.visual-instructions {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.visual-instructions p {
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: #1e40af;
+}
+
+.visual-instructions ul {
+  margin-left: 18px;
+  font-size: 12px;
+  color: #3b82f6;
+  line-height: 1.6;
+}
+
+.picker-btn {
+  width: 100%;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.picker-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+}
+
+.picker-btn:active {
+  transform: translateY(0);
+}
+
+.selected-info {
+  margin-top: 16px;
+  background: #d1fae5;
+  border: 1px solid #6ee7b7;
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.info-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #065f46;
+  margin-bottom: 8px;
+}
+
+.selected-selector {
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
+  background: white;
+  padding: 10px;
+  border-radius: 6px;
+  color: #059669;
+  word-break: break-all;
+  margin-bottom: 10px;
+}
+
+.clear-btn {
+  width: 100%;
+  padding: 8px;
+  background: #f87171;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.clear-btn:hover {
+  background: #ef4444;
+}
+
+/* MANUAL MODE */
 .input-group {
   margin-bottom: 20px;
 }
