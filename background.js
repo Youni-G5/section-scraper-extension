@@ -1,8 +1,5 @@
-// background.js (service worker)
+// background.js (service worker) - AVEC réouverture popup
 // Crée un ZIP contenant section.html, section.css, section.js et lance le téléchargement
-
-// Simple implémentation ZIP (sans dépendance externe) basée sur un format minimal
-// Pour un projet avancé, vous pouvez remplacer cette partie par JSZip ou une lib dédiée.
 
 function stringToUint8Array(str) {
   const encoder = new TextEncoder();
@@ -107,33 +104,44 @@ function createMinimalZip(files) {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type !== "CREATE_ZIP_AND_DOWNLOAD") return;
+  // Gérer la réouverture du popup
+  if (message.type === 'REOPEN_POPUP') {
+    console.log('[Background] Réouverture du popup demandée');
+    chrome.action.openPopup().catch(err => {
+      console.log('[Background] Impossible de rouvrir le popup automatiquement:', err);
+      // Sur Chrome, openPopup() ne fonctionne que si l'utilisateur a interagi
+      // Mais le storage persiste, donc le popup montrera la sélection au prochain clic
+    });
+    return true;
+  }
+
+  if (message.type !== 'CREATE_ZIP_AND_DOWNLOAD') return;
 
   const { html, css, js, meta } = message.payload;
 
   const headerComment = `<!--\n  Section extraite depuis : ${meta.url}\n  Sélecteur : ${meta.selector}\n  Date d'extraction : ${meta.extractedAt}\n\n  Notes :\n  - Vérifiez les chemins d'images (data-original-src) et importez-les dans Shopify.\n  - Adaptez ce markup en Liquid (sections, snippets, blocks) selon votre thème.\n-->\n\n`;
 
-  const cssComment = `/*\n  CSS extrait pour la section : ${meta.selector}\n  Source : ${meta.url}\n  Date : ${meta.extractedAt}\n\n  Recommandations Shopify :\n  - Nettoyez les sélecteurs globaux et limitez-vous à la section.\n  - Utilisez les classes utilitaires ou tokens de design de votre thème.\n*/\n\n`;
+  const cssComment = `/*\n  CSS extrait pour la section : ${meta.selector}\n  Source : ${meta.url}\n  Date : ${meta.extractedAt}\n\n  Recommandations Shopify :\n  - Nettoyez les sélecteurs globaux et limitez-vous à la section.\n  - Utilisez les classes utilitaires ou tokens de design de votre thème.\n  - Vérifiez les @keyframes et @media queries.\n*/\n\n`;
 
-  const jsComment = `/*\n  JS extrait pour la section : ${meta.selector}\n  Source : ${meta.url}\n  Date : ${meta.extractedAt}\n\n  IMPORTANT :\n  - Intégrez cette logique dans un fichier JS de thème (theme.js, global.js, etc.).\n  - Utilisez les events Shopify (section load, section select) pour initialiser la section.\n  - Complétez manuellement avec les scripts globaux si nécessaire.\n\n  Notes automatiques :\n  ${meta.notes?.map((n) => `  - ${n}`).join("\n") || "  -"}\n*/\n\n`;
+  const jsComment = `/*\n  JS extrait pour la section : ${meta.selector}\n  Source : ${meta.url}\n  Date : ${meta.extractedAt}\n\n  IMPORTANT :\n  - Intégrez cette logique dans un fichier JS de thème (theme.js, global.js, etc.).\n  - Utilisez les events Shopify (section load, section select) pour initialiser la section.\n  - Complétez manuellement avec les scripts globaux si nécessaire.\n\n  Notes automatiques :\n  ${meta.notes?.map((n) => `  - ${n}`).join('\n') || '  -'}\n*/\n\n`;
 
   const files = [
     {
-      name: "section.html",
+      name: 'section.html',
       content: headerComment + html,
     },
     {
-      name: "section.css",
-      content: cssComment + (css || "/* Aucun style CSS spécifique détecté pour cette section. */\n"),
+      name: 'section.css',
+      content: cssComment + (css || '/* Aucun style CSS spécifique détecté pour cette section. */\n'),
     },
     {
-      name: "section.js",
-      content: jsComment + (js || "// Aucun JavaScript spécifique détecté pour cette section.\n"),
+      name: 'section.js',
+      content: jsComment + (js || '// Aucun JavaScript spécifique détecté pour cette section.\n'),
     },
   ];
 
   const zipBytes = createMinimalZip(files);
-  const blob = new Blob([zipBytes], { type: "application/zip" });
+  const blob = new Blob([zipBytes], { type: 'application/zip' });
   const url = URL.createObjectURL(blob);
 
   const fileName = `section-scraper-${Date.now()}.zip`;
@@ -148,3 +156,5 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   return true;
 });
+
+console.log('[Background] Service worker chargé');

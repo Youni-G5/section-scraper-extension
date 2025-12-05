@@ -1,4 +1,4 @@
-// visual-selector.js - Version corrigée
+// visual-selector.js - CORRIGÉ : Verrouillage au clic + réouverture popup
 // Script injecté pour permettre la sélection visuelle d'éléments sur la page
 
 (function() {
@@ -12,6 +12,7 @@
   let overlay = null;
   let tooltip = null;
   let isActive = false;
+  let isLocked = false; // NOUVEAU : verrouiller après le clic
 
   // Créer l'overlay de surbrillance
   function createOverlay() {
@@ -82,7 +83,7 @@
 
   // Mettre à jour la position de l'overlay et tooltip
   function updateOverlay(element) {
-    if (!element || !overlay) return;
+    if (!element || !overlay || isLocked) return; // BLOQUER si verrouillé
 
     const rect = element.getBoundingClientRect();
     const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
@@ -180,7 +181,7 @@
 
   // Gestionnaire de survol
   function handleMouseMove(e) {
-    if (!isActive) return;
+    if (!isActive || isLocked) return; // BLOQUER le mouvement si verrouillé
 
     // Ignorer les éléments de l'extension
     if (e.target.id && e.target.id.startsWith('section-scraper-')) {
@@ -193,7 +194,7 @@
 
   // Gestionnaire de clic
   function handleClick(e) {
-    if (!isActive) return;
+    if (!isActive || isLocked) return; // Ignorer si déjà verrouillé
 
     // Ignorer les éléments de l'extension
     if (e.target.id && e.target.id.startsWith('section-scraper-')) {
@@ -204,15 +205,36 @@
     e.stopPropagation();
     e.stopImmediatePropagation();
 
+    // VERROUILLER IMMÉDIATEMENT
+    isLocked = true;
+    isActive = false;
+
+    console.log('[Section Scraper] CLIC DÉTECTÉ - VERROUILLAGE');
+
     if (currentElement) {
       const selector = generateSelector(currentElement);
       console.log('[Section Scraper] Sélecteur généré:', selector);
       
-      // Feedback visuel de confirmation
+      // Feedback visuel VERT
       if (overlay) {
-        overlay.style.background = 'rgba(16, 185, 129, 0.25)';
+        overlay.style.background = 'rgba(16, 185, 129, 0.3)';
         overlay.style.borderColor = '#10b981';
         overlay.style.borderWidth = '3px';
+      }
+
+      // Changer le badge
+      const badge = document.getElementById('section-scraper-badge');
+      if (badge) {
+        badge.innerHTML = `
+          <span style="font-size: 18px;">✅</span>
+          <span>Section sélectionnée ! Ouverture du popup...</span>
+        `;
+        badge.style.background = '#10b981';
+      }
+
+      // Cacher le tooltip
+      if (tooltip) {
+        tooltip.style.display = 'none';
       }
 
       // Sauvegarder le sélecteur
@@ -220,18 +242,17 @@
         selectedSelector: selector,
         timestamp: Date.now()
       }, () => {
-        console.log('[Section Scraper] Sélecteur sauvegardé');
+        console.log('[Section Scraper] Sélecteur sauvegardé, réouverture du popup');
         
-        // Notifier le popup
+        // Demander au background de rouvrir le popup
         chrome.runtime.sendMessage({
-          type: 'SELECTOR_PICKED',
-          selector: selector
+          type: 'REOPEN_POPUP'
         });
 
-        // Nettoyer après un court délai
+        // Nettoyer après un délai
         setTimeout(() => {
           cleanup();
-        }, 500);
+        }, 1000);
       });
     }
 
@@ -250,6 +271,7 @@
   function cleanup() {
     console.log('[Section Scraper] Nettoyage');
     isActive = false;
+    isLocked = false;
     
     document.removeEventListener('mousemove', handleMouseMove, true);
     document.removeEventListener('click', handleClick, true);
@@ -284,6 +306,7 @@
 
     window.__sectionScraperActive = true;
     isActive = true;
+    isLocked = false;
     
     createOverlay();
     createTooltip();
