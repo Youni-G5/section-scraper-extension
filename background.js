@@ -1,12 +1,175 @@
-// background.js (service worker) - AVEC réouverture popup
-// Crée un ZIP contenant section.html, section.css, section.js et lance le téléchargement
+// background.js - Service worker avec génération .liquid Shopify
 
 function stringToUint8Array(str) {
   const encoder = new TextEncoder();
   return encoder.encode(str);
 }
 
-// ZIP minimaliste (Store only, sans compression)
+// Générer un fichier .liquid Shopify complet
+function generateLiquidFile(data) {
+  const { html, css, js, meta } = data;
+  const timestamp = new Date().toISOString().split('T')[0];
+  const sectionName = meta.selector.replace(/[^a-zA-Z0-9-]/g, '-').replace(/-+/g, '-');
+
+  const liquidContent = `{%- comment -%}
+  Section: Custom Scraped Section
+  Source: ${meta.url}
+  Sélecteur: ${meta.selector}
+  Date d'extraction: ${timestamp}
+  
+  ⚠️ IMPORTANT :
+  - Cette section est une copie EXACTE du code original
+  - Vérifiez les images et remplacez les URLs par des assets Shopify
+  - Testez dans le Theme Customizer avant de publier
+  - Les data-attributes et classes sont préservés à 100%
+{%- endcomment -%}
+
+<div class="custom-section-{{ section.id }}" data-section-id="{{ section.id }}">
+  {%- comment -%} HTML ORIGINAL - 100% IDENTIQUE {%- endcomment -%}
+  
+${html}
+
+</div>
+
+{% schema %}
+{
+  "name": "Section Extraite",
+  "class": "custom-scraped-section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Instructions"
+    },
+    {
+      "type": "paragraph",
+      "content": "Section extraite de: ${meta.url.substring(0, 50)}..."
+    },
+    {
+      "type": "paragraph",
+      "content": "Sélecteur CSS: ${meta.selector}"
+    },
+    {
+      "type": "header",
+      "content": "Édition du contenu"
+    },
+    {
+      "type": "html",
+      "id": "custom_content",
+      "label": "Contenu personnalisé",
+      "info": "Modifiez le HTML ci-dessus directement dans ce fichier .liquid pour personnaliser le contenu"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Section Extraite"
+    }
+  ]
+}
+{% endschema %}
+
+{% stylesheet %}
+/* ================================================
+   CSS ORIGINAL - AUCUNE MODIFICATION
+   Extrait de: ${meta.url}
+   Sélecteur: ${meta.selector}
+   Date: ${timestamp}
+   ================================================ */
+
+/* Isolation des styles avec préfixage de section */
+.custom-section-{{ section.id }} {
+  /* Styles racine si nécessaire */
+}
+
+/* CSS COMPLET EXTRAIT */
+${css || '/* Aucun CSS spécifique détecté */'}
+
+/* ================================================
+   NOTES :
+   - Tous les sélecteurs sont préservés
+   - Les @keyframes, @media, @font-face sont intacts
+   - Vérifiez les conflits avec votre thème
+   - Ajoutez .custom-section-{{ section.id }} devant
+     les sélecteurs pour isoler si nécessaire
+   ================================================ */
+{% endstylesheet %}
+
+{% javascript %}
+/* ================================================
+   JAVASCRIPT ORIGINAL - AUCUNE MODIFICATION
+   Extrait de: ${meta.url}
+   Sélecteur: ${meta.selector}
+   Date: ${timestamp}
+   ================================================ */
+
+(function() {
+  'use strict';
+  
+  // Fonction d'initialisation de la section
+  function initCustomSection() {
+    const section = document.querySelector('.custom-section-{{ section.id }}');
+    if (!section) {
+      console.warn('[Custom Section] Section non trouvée');
+      return;
+    }
+
+    // ================================================
+    // JAVASCRIPT COMPLET EXTRAIT
+    // ================================================
+    
+    ${js || '// Aucun JavaScript spécifique détecté'}
+
+    console.log('[Custom Section] Section initialisée');
+  }
+
+  // Initialisation au chargement du DOM
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCustomSection);
+  } else {
+    initCustomSection();
+  }
+
+  // Support du Theme Editor Shopify
+  document.addEventListener('shopify:section:load', function(event) {
+    const target = event.target;
+    if (target && target.querySelector('.custom-section-{{ section.id }}')) {
+      console.log('[Custom Section] Rechargement dans le Theme Editor');
+      initCustomSection();
+    }
+  });
+
+  // Support du Theme Editor - section select
+  document.addEventListener('shopify:section:select', function(event) {
+    const target = event.target;
+    if (target && target.querySelector('.custom-section-{{ section.id }}')) {
+      console.log('[Custom Section] Section sélectionnée dans le Theme Editor');
+    }
+  });
+
+  // Support du Theme Editor - section deselect
+  document.addEventListener('shopify:section:deselect', function(event) {
+    const target = event.target;
+    if (target && target.querySelector('.custom-section-{{ section.id }}')) {
+      console.log('[Custom Section] Section désélectionnée dans le Theme Editor');
+    }
+  });
+})();
+
+/* ================================================
+   NOTES IMPORTANTES :
+   ${meta.notes && meta.notes.length > 0 ? meta.notes.map(n => `- ${n}`).join('\n   ') : '- Aucune note spécifique'}
+   
+   - Tous les event listeners sont préservés
+   - Les animations et interactions sont intactes
+   - Le code est scopé à la section avec {{ section.id }}
+   - Compatible avec le Theme Editor Shopify
+   ================================================ */
+{% endjavascript %}
+`;
+
+  return liquidContent;
+}
+
+// ZIP minimaliste
 function createMinimalZip(files) {
   const encoder = new TextEncoder();
   const chunks = [];
@@ -17,56 +180,49 @@ function createMinimalZip(files) {
     const contentBytes = stringToUint8Array(file.content);
     const localHeaderOffset = offset;
 
-    // Local file header
     const localHeader = new Uint8Array(30 + nameBytes.length);
     const view = new DataView(localHeader.buffer);
-    view.setUint32(0, 0x04034b50, true); // Local file header signature
-    view.setUint16(4, 20, true); // Version needed to extract
-    view.setUint16(6, 0, true); // General purpose bit flag
-    view.setUint16(8, 0, true); // Compression method (0 = store)
-    view.setUint16(10, 0, true); // File last mod time
-    view.setUint16(12, 0, true); // File last mod date
-    view.setUint32(14, 0, true); // CRC-32 (0 pour simplifier, certains unzip tolèrent)
-    view.setUint32(18, contentBytes.length, true); // Compressed size
-    view.setUint32(22, contentBytes.length, true); // Uncompressed size
-    view.setUint16(26, nameBytes.length, true); // File name length
-    view.setUint16(28, 0, true); // Extra field length
+    view.setUint32(0, 0x04034b50, true);
+    view.setUint16(4, 20, true);
+    view.setUint16(6, 0, true);
+    view.setUint16(8, 0, true);
+    view.setUint16(10, 0, true);
+    view.setUint16(12, 0, true);
+    view.setUint32(14, 0, true);
+    view.setUint32(18, contentBytes.length, true);
+    view.setUint32(22, contentBytes.length, true);
+    view.setUint16(26, nameBytes.length, true);
+    view.setUint16(28, 0, true);
     localHeader.set(nameBytes, 30);
 
     chunks.push(localHeader, contentBytes);
     offset += localHeader.length + contentBytes.length;
 
-    return {
-      file,
-      nameBytes,
-      contentBytes,
-      localHeaderOffset,
-    };
+    return { file, nameBytes, contentBytes, localHeaderOffset };
   });
 
   const centralDirectoryOffset = offset;
 
-  // Central directory
   fileEntries.forEach((entry) => {
     const centralHeader = new Uint8Array(46 + entry.nameBytes.length);
     const view = new DataView(centralHeader.buffer);
-    view.setUint32(0, 0x02014b50, true); // Central file header signature
-    view.setUint16(4, 20, true); // Version made by
-    view.setUint16(6, 20, true); // Version needed to extract
-    view.setUint16(8, 0, true); // General purpose bit flag
-    view.setUint16(10, 0, true); // Compression method (0 = store)
-    view.setUint16(12, 0, true); // File last mod time
-    view.setUint16(14, 0, true); // File last mod date
-    view.setUint32(16, 0, true); // CRC-32 (0 simplifié)
-    view.setUint32(20, entry.contentBytes.length, true); // Compressed size
-    view.setUint32(24, entry.contentBytes.length, true); // Uncompressed size
-    view.setUint16(28, entry.nameBytes.length, true); // File name length
-    view.setUint16(30, 0, true); // Extra field length
-    view.setUint16(32, 0, true); // File comment length
-    view.setUint16(34, 0, true); // Disk number start
-    view.setUint16(36, 0, true); // Internal file attributes
-    view.setUint32(38, 0, true); // External file attributes
-    view.setUint32(42, entry.localHeaderOffset, true); // Relative offset of local header
+    view.setUint32(0, 0x02014b50, true);
+    view.setUint16(4, 20, true);
+    view.setUint16(6, 20, true);
+    view.setUint16(8, 0, true);
+    view.setUint16(10, 0, true);
+    view.setUint16(12, 0, true);
+    view.setUint16(14, 0, true);
+    view.setUint32(16, 0, true);
+    view.setUint32(20, entry.contentBytes.length, true);
+    view.setUint32(24, entry.contentBytes.length, true);
+    view.setUint16(28, entry.nameBytes.length, true);
+    view.setUint16(30, 0, true);
+    view.setUint16(32, 0, true);
+    view.setUint16(34, 0, true);
+    view.setUint16(36, 0, true);
+    view.setUint32(38, 0, true);
+    view.setUint32(42, entry.localHeaderOffset, true);
     centralHeader.set(entry.nameBytes, 46);
 
     chunks.push(centralHeader);
@@ -74,25 +230,20 @@ function createMinimalZip(files) {
   });
 
   const centralDirectorySize = offset - centralDirectoryOffset;
-
-  // End of central directory record
   const endRecord = new Uint8Array(22);
   const endView = new DataView(endRecord.buffer);
-  endView.setUint32(0, 0x06054b50, true); // End of central dir signature
-  endView.setUint16(4, 0, true); // Number of this disk
-  endView.setUint16(6, 0, true); // Disk where central directory starts
-  endView.setUint16(8, fileEntries.length, true); // Number of central directory records on this disk
-  endView.setUint16(10, fileEntries.length, true); // Total number of central directory records
-  endView.setUint32(12, centralDirectorySize, true); // Size of central directory
-  endView.setUint32(16, centralDirectoryOffset, true); // Offset of start of central directory
-  endView.setUint16(20, 0, true); // Comment length
-
+  endView.setUint32(0, 0x06054b50, true);
+  endView.setUint16(4, 0, true);
+  endView.setUint16(6, 0, true);
+  endView.setUint16(8, fileEntries.length, true);
+  endView.setUint16(10, fileEntries.length, true);
+  endView.setUint32(12, centralDirectorySize, true);
+  endView.setUint32(16, centralDirectoryOffset, true);
+  endView.setUint16(20, 0, true);
   chunks.push(endRecord);
 
-  // Concatène tous les chunks
   let totalLength = 0;
   chunks.forEach((c) => (totalLength += c.length));
-
   const zip = new Uint8Array(totalLength);
   let position = 0;
   chunks.forEach((c) => {
@@ -104,55 +255,50 @@ function createMinimalZip(files) {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  // Gérer la réouverture du popup
+  // Réouverture du popup
   if (message.type === 'REOPEN_POPUP') {
-    console.log('[Background] Réouverture du popup demandée');
     chrome.action.openPopup().catch(err => {
       console.log('[Background] Impossible de rouvrir le popup automatiquement:', err);
-      // Sur Chrome, openPopup() ne fonctionne que si l'utilisateur a interagi
-      // Mais le storage persiste, donc le popup montrera la sélection au prochain clic
     });
     return true;
   }
 
-  if (message.type !== 'CREATE_ZIP_AND_DOWNLOAD') return;
+  // NOUVEAU : Générer et télécharger le fichier .liquid
+  if (message.type === 'CREATE_LIQUID_FILE') {
+    const liquidContent = generateLiquidFile(message.payload);
+    const blob = new Blob([liquidContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const fileName = `custom-section-${Date.now()}.liquid`;
 
-  const { html, css, js, meta } = message.payload;
+    chrome.downloads.download({
+      url,
+      filename: fileName,
+      saveAs: true,
+    });
 
-  const headerComment = `<!--\n  Section extraite depuis : ${meta.url}\n  Sélecteur : ${meta.selector}\n  Date d'extraction : ${meta.extractedAt}\n\n  Notes :\n  - Vérifiez les chemins d'images (data-original-src) et importez-les dans Shopify.\n  - Adaptez ce markup en Liquid (sections, snippets, blocks) selon votre thème.\n-->\n\n`;
+    sendResponse && sendResponse({ success: true });
+    return true;
+  }
 
-  const cssComment = `/*\n  CSS extrait pour la section : ${meta.selector}\n  Source : ${meta.url}\n  Date : ${meta.extractedAt}\n\n  Recommandations Shopify :\n  - Nettoyez les sélecteurs globaux et limitez-vous à la section.\n  - Utilisez les classes utilitaires ou tokens de design de votre thème.\n  - Vérifiez les @keyframes et @media queries.\n*/\n\n`;
+  // Télécharger ZIP
+  if (message.type === 'CREATE_ZIP_AND_DOWNLOAD') {
+    const { html, css, js, meta } = message.payload;
 
-  const jsComment = `/*\n  JS extrait pour la section : ${meta.selector}\n  Source : ${meta.url}\n  Date : ${meta.extractedAt}\n\n  IMPORTANT :\n  - Intégrez cette logique dans un fichier JS de thème (theme.js, global.js, etc.).\n  - Utilisez les events Shopify (section load, section select) pour initialiser la section.\n  - Complétez manuellement avec les scripts globaux si nécessaire.\n\n  Notes automatiques :\n  ${meta.notes?.map((n) => `  - ${n}`).join('\n') || '  -'}\n*/\n\n`;
+    const files = [
+      { name: 'section.html', content: `<!-- Extrait de: ${meta.url} -->\n\n${html}` },
+      { name: 'section.css', content: `/* Extrait de: ${meta.url} */\n\n${css || '/* Aucun CSS */'}` },
+      { name: 'section.js', content: `/* Extrait de: ${meta.url} */\n\n${js || '// Aucun JS'}` },
+    ];
 
-  const files = [
-    {
-      name: 'section.html',
-      content: headerComment + html,
-    },
-    {
-      name: 'section.css',
-      content: cssComment + (css || '/* Aucun style CSS spécifique détecté pour cette section. */\n'),
-    },
-    {
-      name: 'section.js',
-      content: jsComment + (js || '// Aucun JavaScript spécifique détecté pour cette section.\n'),
-    },
-  ];
+    const zipBytes = createMinimalZip(files);
+    const blob = new Blob([zipBytes], { type: 'application/zip' });
+    const url = URL.createObjectURL(blob);
+    const fileName = `section-scraper-${Date.now()}.zip`;
 
-  const zipBytes = createMinimalZip(files);
-  const blob = new Blob([zipBytes], { type: 'application/zip' });
-  const url = URL.createObjectURL(blob);
-
-  const fileName = `section-scraper-${Date.now()}.zip`;
-
-  chrome.downloads.download({
-    url,
-    filename: fileName,
-    saveAs: true,
-  });
-
-  sendResponse && sendResponse({ success: true });
+    chrome.downloads.download({ url, filename: fileName, saveAs: true });
+    sendResponse && sendResponse({ success: true });
+    return true;
+  }
 
   return true;
 });
