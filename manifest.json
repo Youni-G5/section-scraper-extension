@@ -1,12 +1,13 @@
 {
   "manifest_version": 3,
   "name": "Section Scraper for Shopify",
-  "version": "1.0.0",
+  "version": "1.3.0",
   "description": "Extrait des sections web complètes (HTML, CSS, JS) pour les intégrer dans Shopify",
   "permissions": [
     "activeTab",
     "scripting",
-    "downloads"
+    "storage",
+    "clipboardWrite"
   ],
   "host_permissions": [
     "<all_urls>"
