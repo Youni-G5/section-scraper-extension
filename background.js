@@ -1,4 +1,5 @@
 // background.js - Service worker avec génération .liquid Shopify
+// FIX: Utilisation de Data URL au lieu de createObjectURL
 
 function stringToUint8Array(str) {
   const encoder = new TextEncoder();
@@ -169,6 +170,13 @@ ${css || '/* Aucun CSS spécifique détecté */'}
   return liquidContent;
 }
 
+// Convertir contenu en Data URL pour téléchargement
+function createDataUrl(content, mimeType = 'text/plain') {
+  // Encoder en base64 pour éviter les problèmes avec les caractères spéciaux
+  const base64 = btoa(unescape(encodeURIComponent(content)));
+  return `data:${mimeType};base64,${base64}`;
+}
+
 // ZIP minimaliste
 function createMinimalZip(files) {
   const encoder = new TextEncoder();
@@ -254,6 +262,17 @@ function createMinimalZip(files) {
   return zip;
 }
 
+// Convertir Uint8Array en Data URL
+function arrayBufferToDataUrl(buffer, mimeType) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  const base64 = btoa(binary);
+  return `data:${mimeType};base64,${base64}`;
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // Réouverture du popup
   if (message.type === 'REOPEN_POPUP') {
@@ -263,41 +282,66 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  // NOUVEAU : Générer et télécharger le fichier .liquid
+  // Générer et télécharger le fichier .liquid
   if (message.type === 'CREATE_LIQUID_FILE') {
-    const liquidContent = generateLiquidFile(message.payload);
-    const blob = new Blob([liquidContent], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const fileName = `custom-section-${Date.now()}.liquid`;
+    try {
+      const liquidContent = generateLiquidFile(message.payload);
+      const dataUrl = createDataUrl(liquidContent, 'text/plain');
+      const fileName = `custom-section-${Date.now()}.liquid`;
 
-    chrome.downloads.download({
-      url,
-      filename: fileName,
-      saveAs: true,
-    });
-
-    sendResponse && sendResponse({ success: true });
-    return true;
+      chrome.downloads.download({
+        url: dataUrl,
+        filename: fileName,
+        saveAs: true,
+      }, (downloadId) => {
+        if (chrome.runtime.lastError) {
+          console.error('[Background] Erreur de téléchargement:', chrome.runtime.lastError);
+          sendResponse({ success: false, error: chrome.runtime.lastError.message });
+        } else {
+          console.log('[Background] Fichier .liquid téléchargé:', downloadId);
+          sendResponse({ success: true });
+        }
+      });
+    } catch (error) {
+      console.error('[Background] Erreur génération .liquid:', error);
+      sendResponse({ success: false, error: error.message });
+    }
+    return true; // Async response
   }
 
   // Télécharger ZIP
   if (message.type === 'CREATE_ZIP_AND_DOWNLOAD') {
-    const { html, css, js, meta } = message.payload;
+    try {
+      const { html, css, js, meta } = message.payload;
 
-    const files = [
-      { name: 'section.html', content: `<!-- Extrait de: ${meta.url} -->\n\n${html}` },
-      { name: 'section.css', content: `/* Extrait de: ${meta.url} */\n\n${css || '/* Aucun CSS */'}` },
-      { name: 'section.js', content: `/* Extrait de: ${meta.url} */\n\n${js || '// Aucun JS'}` },
-    ];
+      const files = [
+        { name: 'section.html', content: `<!-- Extrait de: ${meta.url} -->\n\n${html}` },
+        { name: 'section.css', content: `/* Extrait de: ${meta.url} */\n\n${css || '/* Aucun CSS */'}` },
+        { name: 'section.js', content: `/* Extrait de: ${meta.url} */\n\n${js || '// Aucun JS'}` },
+      ];
 
-    const zipBytes = createMinimalZip(files);
-    const blob = new Blob([zipBytes], { type: 'application/zip' });
-    const url = URL.createObjectURL(blob);
-    const fileName = `section-scraper-${Date.now()}.zip`;
+      const zipBytes = createMinimalZip(files);
+      const dataUrl = arrayBufferToDataUrl(zipBytes, 'application/zip');
+      const fileName = `section-scraper-${Date.now()}.zip`;
 
-    chrome.downloads.download({ url, filename: fileName, saveAs: true });
-    sendResponse && sendResponse({ success: true });
-    return true;
+      chrome.downloads.download({
+        url: dataUrl,
+        filename: fileName,
+        saveAs: true,
+      }, (downloadId) => {
+        if (chrome.runtime.lastError) {
+          console.error('[Background] Erreur de téléchargement ZIP:', chrome.runtime.lastError);
+          sendResponse({ success: false, error: chrome.runtime.lastError.message });
+        } else {
+          console.log('[Background] ZIP téléchargé:', downloadId);
+          sendResponse({ success: true });
+        }
+      });
+    } catch (error) {
+      console.error('[Background] Erreur génération ZIP:', error);
+      sendResponse({ success: false, error: error.message });
+    }
+    return true; // Async response
   }
 
   return true;
