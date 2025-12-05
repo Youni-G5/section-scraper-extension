@@ -9,77 +9,96 @@
 <body>
   <div class="container">
     <div class="header">
-      <h1>🎯 Section Scraper</h1>
-      <p class="subtitle">Pour Shopify Themes</p>
+      <h1>Section Scraper</h1>
+      <p class="subtitle">Extraction complète pour Shopify</p>
     </div>
 
     <div class="content">
-      <!-- MODE DE SÉLECTION -->
       <div class="mode-selector">
         <button id="visualModeBtn" class="mode-btn active">
-          <span class="mode-icon">👆</span>
-          <span>Mode Visuel</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+            <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+          <span>Visuel</span>
         </button>
         <button id="manualModeBtn" class="mode-btn">
-          <span class="mode-icon">⌨️</span>
-          <span>Mode Manuel</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 7h16M4 12h16M4 17h16"/>
+          </svg>
+          <span>Manuel</span>
         </button>
       </div>
 
-      <!-- MODE VISUEL -->
       <div id="visualMode" class="mode-content">
-        <div class="visual-instructions">
-          <p><strong>👇 Clique sur le bouton ci-dessous, puis sur la section de la page que tu veux copier.</strong></p>
-          <ul>
-            <li>La section sera surlignée en bleu au survol</li>
-            <li>Clique pour sélectionner</li>
-            <li>Le sélecteur CSS sera généré automatiquement</li>
-          </ul>
+        <div class="visual-box">
+          <p class="instruction">Sélectionnez visuellement la section à extraire sur la page</p>
+          <button id="activatePickerBtn" class="picker-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+            <span>Sélectionner</span>
+          </button>
         </div>
-        <button id="activatePickerBtn" class="picker-btn">
-          <span class="btn-icon">🎯</span>
-          <span class="btn-text">Sélectionner une Section</span>
-        </button>
         <div id="selectedInfo" class="selected-info hidden">
-          <div class="info-label">✅ Section sélectionnée :</div>
-          <div id="selectedSelector" class="selected-selector"></div>
-          <button id="clearSelection" class="clear-btn">❌ Annuler</button>
+          <div class="info-header">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span>Section sélectionnée</span>
+          </div>
+          <div id="selectedSelector" class="selector-code"></div>
+          <button id="clearSelection" class="clear-btn">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+            <span>Effacer</span>
+          </button>
         </div>
       </div>
 
-      <!-- MODE MANUEL -->
       <div id="manualMode" class="mode-content hidden">
-        <div class="input-group">
-          <label for="selector">Sélecteur CSS de la section :</label>
+        <div class="input-wrapper">
+          <label for="selector">Sélecteur CSS</label>
           <input 
             type="text" 
             id="selector" 
-            placeholder="Ex: .product-section, #hero, [data-section='banner']" 
+            placeholder=".section, #hero, [data-section]"
             autocomplete="off"
           >
-          <small class="hint">💡 Astuce : Clic droit > Inspecter > Copier le sélecteur</small>
+          <span class="hint">Ex: .product-grid, #banner, [data-id="hero"]</span>
         </div>
       </div>
 
-      <!-- OPTIONS -->
+      <div class="divider"></div>
+
       <div class="options">
-        <label class="checkbox-label">
+        <label class="option-item">
           <input type="checkbox" id="includeImages" checked>
-          <span>Télécharger les images locales</span>
+          <span class="checkbox-custom"></span>
+          <span class="option-label">Images et ressources</span>
         </label>
-        <label class="checkbox-label">
+        <label class="option-item">
           <input type="checkbox" id="inlineStyles" checked>
-          <span>Inclure tous les styles calculés</span>
+          <span class="checkbox-custom"></span>
+          <span class="option-label">Styles inline</span>
         </label>
-        <label class="checkbox-label">
+        <label class="option-item">
           <input type="checkbox" id="includeScripts" checked>
-          <span>Extraire le JavaScript associé</span>
+          <span class="checkbox-custom"></span>
+          <span class="option-label">Scripts et animations</span>
         </label>
       </div>
 
       <button id="extractBtn" class="extract-btn">
-        <span class="btn-icon">⬇️</span>
-        <span class="btn-text">Extraire la Section</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        <span>Extraire la section</span>
       </button>
 
       <div id="status" class="status hidden"></div>
@@ -89,7 +108,7 @@
     </div>
 
     <div class="footer">
-      <small>v1.1.0 | Mode visuel ajouté</small>
+      <span class="version">v1.2.0</span>
     </div>
   </div>
 
