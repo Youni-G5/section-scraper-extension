@@ -1,7 +1,8 @@
-// popup.js - Version corrigée avec gestion complète
+// popup.js - Version avec copie presse-papier
 
 const selectorInput = document.getElementById('selector');
 const extractBtn = document.getElementById('extractBtn');
+const downloadBtn = document.getElementById('downloadBtn');
 const statusEl = document.getElementById('status');
 const progressEl = document.getElementById('progress');
 const progressBarEl = document.querySelector('.progress-bar');
@@ -20,20 +21,31 @@ const clearSelectionBtn = document.getElementById('clearSelection');
 
 let currentMode = 'visual';
 let selectedSelector = null;
+let extractedData = null; // Stocker les données extraites
 
 function setStatus(message, type = 'info') {
   statusEl.textContent = message;
   statusEl.className = `status ${type}`;
   statusEl.classList.remove('hidden');
+  
+  // Auto-hide après 5 secondes pour success
+  if (type === 'success') {
+    setTimeout(() => {
+      statusEl.classList.add('hidden');
+    }, 5000);
+  }
 }
 
 function setLoading(isLoading) {
   extractBtn.disabled = isLoading;
+  downloadBtn.disabled = isLoading;
   progressEl.classList.toggle('hidden', !isLoading);
   if (isLoading) {
     extractBtn.style.opacity = '0.5';
+    downloadBtn.style.opacity = '0.5';
   } else {
     extractBtn.style.opacity = '1';
+    downloadBtn.style.opacity = '1';
     progressBarEl.style.width = '0%';
   }
 }
@@ -62,22 +74,17 @@ activatePickerBtn.addEventListener('click', async () => {
     
     console.log('[Popup] Injection du script visuel');
     
-    // Injecter le script
     await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       files: ['visual-selector.js']
     });
 
-    // Petit délai pour s'assurer que le script est chargé
     await new Promise(resolve => setTimeout(resolve, 100));
 
-    // Activer le mode sélection
     console.log('[Popup] Activation du mode sélection');
     await chrome.tabs.sendMessage(tab.id, { type: 'ACTIVATE_VISUAL_SELECTOR' });
     
     setStatus('Clique sur la section que tu veux extraire', 'info');
-    
-    // Fermer le popup
     window.close();
   } catch (error) {
     console.error('[Popup] Erreur:', error);
@@ -88,7 +95,6 @@ activatePickerBtn.addEventListener('click', async () => {
 // Vérifier s'il y a une sélection au chargement
 chrome.storage.local.get(['selectedSelector', 'timestamp'], (result) => {
   if (result.selectedSelector) {
-    // Vérifier que la sélection n'est pas trop ancienne (5 minutes)
     const age = Date.now() - (result.timestamp || 0);
     if (age < 5 * 60 * 1000) {
       selectedSelector = result.selectedSelector;
@@ -96,47 +102,36 @@ chrome.storage.local.get(['selectedSelector', 'timestamp'], (result) => {
       selectedInfo.classList.remove('hidden');
       console.log('[Popup] Sélection restaurée:', selectedSelector);
     } else {
-      // Nettoyer les anciennes sélections
       chrome.storage.local.remove(['selectedSelector', 'timestamp']);
     }
-  }
-});
-
-// Écouter les messages (sélection effectuée)
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === 'SELECTOR_PICKED') {
-    selectedSelector = message.selector;
-    selectedSelectorEl.textContent = selectedSelector;
-    selectedInfo.classList.remove('hidden');
-    console.log('[Popup] Nouvelle sélection reçue:', selectedSelector);
   }
 });
 
 // Annuler la sélection
 clearSelectionBtn.addEventListener('click', () => {
   selectedSelector = null;
+  extractedData = null;
   chrome.storage.local.remove(['selectedSelector', 'timestamp']);
   selectedInfo.classList.add('hidden');
   selectedSelectorEl.textContent = '';
   setStatus('Sélection effacée', 'info');
-  setTimeout(() => statusEl.classList.add('hidden'), 2000);
 });
 
-// Extraction de la section
-extractBtn.addEventListener('click', async () => {
+// Fonction pour extraire la section
+async function extractSection() {
   let selector;
 
   if (currentMode === 'visual') {
     if (!selectedSelector) {
       setStatus('Sélectionne d\'abord une section en mode visuel', 'error');
-      return;
+      return null;
     }
     selector = selectedSelector;
   } else {
     selector = selectorInput.value.trim();
     if (!selector) {
       setStatus('Entre un sélecteur CSS valide', 'error');
-      return;
+      return null;
     }
   }
 
@@ -164,16 +159,58 @@ extractBtn.addEventListener('click', async () => {
       throw new Error(response?.error || 'Erreur inconnue lors de l\'extraction');
     }
 
-    console.log('[Popup] Création du ZIP');
+    console.log('[Popup] Extraction réussie');
+    return response.data;
+  } catch (error) {
+    console.error('[Popup] Erreur:', error);
+    setStatus(error.message || 'Erreur pendant l\'extraction', 'error');
+    return null;
+  } finally {
+    setLoading(false);
+  }
+}
 
-    await chrome.runtime.sendMessage({
-      type: 'CREATE_ZIP_AND_DOWNLOAD',
-      payload: response.data,
-    });
+// Copier dans le presse-papier (bouton principal)
+extractBtn.addEventListener('click', async () => {
+  const data = await extractSection();
+  if (!data) return;
 
-    setStatus('✓ Section extraite avec succès', 'success');
+  extractedData = data;
+
+  // Formatter le code pour le presse-papier
+  const formattedCode = `
+/* ============================================
+ * SECTION EXTRAITE
+ * Source: ${data.meta.url}
+ * Sélecteur: ${data.meta.selector}
+ * Date: ${data.meta.extractedAt}
+ * ============================================ */
+
+/* ========== HTML ========== */
+
+${data.html}
+
+
+/* ========== CSS ========== */
+
+<style>
+${data.css}
+</style>
+
+
+/* ========== JAVASCRIPT ========== */
+
+<script>
+${data.js}
+</script>
+`;
+
+  try {
+    // Copier dans le presse-papier
+    await navigator.clipboard.writeText(formattedCode);
+    setStatus('✓ Code copié dans le presse-papier !', 'success');
     
-    // Nettoyer la sélection après extraction
+    // Nettoyer la sélection après copie
     if (currentMode === 'visual') {
       setTimeout(() => {
         selectedSelector = null;
@@ -182,10 +219,42 @@ extractBtn.addEventListener('click', async () => {
       }, 2000);
     }
   } catch (error) {
-    console.error('[Popup] Erreur:', error);
-    setStatus(error.message || 'Erreur pendant l\'extraction', 'error');
-  } finally {
-    setLoading(false);
+    console.error('[Popup] Erreur copie:', error);
+    setStatus('Erreur lors de la copie dans le presse-papier', 'error');
+  }
+});
+
+// Télécharger en ZIP (bouton secondaire)
+downloadBtn.addEventListener('click', async () => {
+  let data = extractedData;
+  
+  // Si pas de données en cache, extraire
+  if (!data) {
+    data = await extractSection();
+    if (!data) return;
+    extractedData = data;
+  }
+
+  console.log('[Popup] Création du ZIP');
+
+  try {
+    await chrome.runtime.sendMessage({
+      type: 'CREATE_ZIP_AND_DOWNLOAD',
+      payload: data,
+    });
+
+    setStatus('✓ ZIP téléchargé avec succès', 'success');
+    
+    if (currentMode === 'visual') {
+      setTimeout(() => {
+        selectedSelector = null;
+        chrome.storage.local.remove(['selectedSelector', 'timestamp']);
+        selectedInfo.classList.add('hidden');
+      }, 2000);
+    }
+  } catch (error) {
+    console.error('[Popup] Erreur ZIP:', error);
+    setStatus('Erreur lors de la création du ZIP', 'error');
   }
 });
 
