@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Section Scraper</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎯 Section Scraper</h1>
+      <p class="subtitle">Pour Shopify Themes</p>
+    </div>
+
+    <div class="content">
+      <div class="input-group">
+        <label for="selector">Sélecteur CSS de la section :</label>
+        <input 
+          type="text" 
+          id="selector" 
+          placeholder="Ex: .product-section, #hero, [data-section='banner']" 
+          autocomplete="off"
+        >
+        <small class="hint">💡 Astuce : Clic droit > Inspecter l'élément pour trouver le sélecteur</small>
+      </div>
+
+      <div class="options">
+        <label class="checkbox-label">
+          <input type="checkbox" id="includeImages" checked>
+          <span>Télécharger les images locales</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" id="inlineStyles" checked>
+          <span>Inclure tous les styles calculés</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" id="includeScripts" checked>
+          <span>Extraire le JavaScript associé</span>
+        </label>
+      </div>
+
+      <button id="extractBtn" class="extract-btn">
+        <span class="btn-icon">⬇️</span>
+        <span class="btn-text">Extraire la Section</span>
+      </button>
+
+      <div id="status" class="status hidden"></div>
+      <div id="progress" class="progress hidden">
+        <div class="progress-bar"></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <small>v1.0.0 | Créé pour les développeurs Shopify</small>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
