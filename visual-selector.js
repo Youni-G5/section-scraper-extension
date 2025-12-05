@@ -1,166 +1,193 @@
-// visual-selector.js
+// visual-selector.js - Version corrigée
 // Script injecté pour permettre la sélection visuelle d'éléments sur la page
 
 (function() {
-  // Vérifier si le mode est déjà actif
+  // Éviter les injections multiples
   if (window.__sectionScraperActive) {
+    console.log('[Section Scraper] Déjà actif');
     return;
   }
 
-  window.__sectionScraperActive = true;
-
   let currentElement = null;
   let overlay = null;
+  let tooltip = null;
   let isActive = false;
 
   // Créer l'overlay de surbrillance
   function createOverlay() {
-    overlay = document.createElement("div");
-    overlay.id = "section-scraper-overlay";
+    overlay = document.createElement('div');
+    overlay.id = 'section-scraper-overlay';
     overlay.style.cssText = `
       position: absolute;
-      background: rgba(59, 130, 246, 0.3);
-      border: 3px solid #3b82f6;
+      background: rgba(99, 102, 241, 0.15);
+      border: 2px solid #6366f1;
       pointer-events: none;
-      z-index: 2147483647;
-      transition: all 0.1s ease;
-      box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.3);
+      z-index: 2147483646;
+      transition: all 0.15s ease;
+      border-radius: 4px;
     `;
     document.body.appendChild(overlay);
   }
 
+  // Créer le tooltip d'information
+  function createTooltip() {
+    tooltip = document.createElement('div');
+    tooltip.id = 'section-scraper-tooltip';
+    tooltip.style.cssText = `
+      position: absolute;
+      background: #1f2937;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      z-index: 2147483647;
+      pointer-events: none;
+      white-space: nowrap;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    `;
+    document.body.appendChild(tooltip);
+  }
+
   // Créer le badge d'information
   function createInfoBadge() {
-    const badge = document.createElement("div");
-    badge.id = "section-scraper-badge";
+    const badge = document.createElement('div');
+    badge.id = 'section-scraper-badge';
     badge.style.cssText = `
       position: fixed;
-      top: 10px;
+      top: 16px;
       left: 50%;
       transform: translateX(-50%);
-      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      background: #1f2937;
       color: white;
       padding: 12px 24px;
       border-radius: 8px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 14px;
-      font-weight: 600;
+      font-size: 13px;
+      font-weight: 500;
       z-index: 2147483647;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      animation: slideDown 0.3s ease;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 12px;
     `;
     badge.innerHTML = `
-      🎯 Clique sur la section à copier | <span style="opacity: 0.8; font-size: 12px;">ESC pour annuler</span>
+      <span style="font-size: 18px;">🎯</span>
+      <span>Clique sur la section à extraire</span>
+      <span style="opacity: 0.6; font-size: 11px; margin-left: 8px;">ESC pour annuler</span>
     `;
     document.body.appendChild(badge);
-
-    // Animation
-    const style = document.createElement("style");
-    style.textContent = `
-      @keyframes slideDown {
-        from { transform: translate(-50%, -100%); opacity: 0; }
-        to { transform: translate(-50%, 0); opacity: 1; }
-      }
-    `;
-    document.head.appendChild(style);
   }
 
-  // Mettre à jour la position de l'overlay
+  // Mettre à jour la position de l'overlay et tooltip
   function updateOverlay(element) {
     if (!element || !overlay) return;
 
     const rect = element.getBoundingClientRect();
-    overlay.style.top = `${rect.top + window.scrollY}px`;
-    overlay.style.left = `${rect.left + window.scrollX}px`;
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+
+    overlay.style.top = `${rect.top + scrollTop}px`;
+    overlay.style.left = `${rect.left + scrollLeft}px`;
     overlay.style.width = `${rect.width}px`;
     overlay.style.height = `${rect.height}px`;
+
+    // Positionner le tooltip
+    if (tooltip) {
+      const tag = element.tagName.toLowerCase();
+      const classes = element.className ? `.${element.className.toString().split(' ').slice(0, 2).join('.')}` : '';
+      const id = element.id ? `#${element.id}` : '';
+      tooltip.textContent = `${tag}${id}${classes}`;
+      
+      tooltip.style.top = `${rect.top + scrollTop - 30}px`;
+      tooltip.style.left = `${rect.left + scrollLeft}px`;
+    }
   }
 
   // Générer un sélecteur CSS optimal pour un élément
   function generateSelector(element) {
-    if (!element) return "";
+    if (!element) return '';
 
-    // Si ID unique, l'utiliser
-    if (element.id && document.querySelectorAll(`#${element.id}`).length === 1) {
-      return `#${element.id}`;
+    // 1. ID unique (priorité absolue)
+    if (element.id) {
+      const idSelector = `#${CSS.escape(element.id)}`;
+      if (document.querySelectorAll(idSelector).length === 1) {
+        return idSelector;
+      }
     }
 
-    // Si classe unique
-    if (element.className && typeof element.className === "string") {
-      const classes = element.className.trim().split(/\s+/);
+    // 2. Classe unique
+    if (element.className && typeof element.className === 'string') {
+      const classes = element.className.trim().split(/\s+/).filter(c => c);
       for (const cls of classes) {
-        const selector = `.${cls}`;
-        if (document.querySelectorAll(selector).length === 1) {
-          return selector;
+        const classSelector = `.${CSS.escape(cls)}`;
+        if (document.querySelectorAll(classSelector).length === 1) {
+          return classSelector;
         }
       }
     }
 
-    // Utiliser data-attributes si disponibles
+    // 3. Data-attributes
     for (const attr of element.attributes) {
-      if (attr.name.startsWith("data-")) {
-        const selector = `[${attr.name}="${attr.value}"]`;
-        if (document.querySelectorAll(selector).length === 1) {
-          return selector;
+      if (attr.name.startsWith('data-')) {
+        const attrSelector = `[${attr.name}="${CSS.escape(attr.value)}"]`;
+        if (document.querySelectorAll(attrSelector).length === 1) {
+          return attrSelector;
         }
       }
     }
 
-    // Sinon, construire un chemin avec nth-child
-    const parts = [];
+    // 4. Construire un chemin avec classes et nth-child
+    const path = [];
     let current = element;
-    let attempts = 0;
-
-    while (current && current.nodeType === 1 && attempts < 5) {
+    
+    while (current && current.nodeType === Node.ELEMENT_NODE) {
       let selector = current.tagName.toLowerCase();
-
+      
       if (current.id) {
-        selector = `#${current.id}`;
-        parts.unshift(selector);
+        selector = `#${CSS.escape(current.id)}`;
+        path.unshift(selector);
         break;
       }
-
-      if (current.className && typeof current.className === "string") {
-        const classes = current.className.trim().split(/\s+/).slice(0, 2);
-        if (classes.length) {
-          selector += "." + classes.join(".");
+      
+      if (current.className && typeof current.className === 'string') {
+        const classes = current.className.trim().split(/\s+/).filter(c => c).slice(0, 2);
+        if (classes.length > 0) {
+          selector += classes.map(c => `.${CSS.escape(c)}`).join('');
         }
       }
-
-      // Ajouter nth-child si nécessaire
-      if (current.parentElement) {
-        const siblings = Array.from(current.parentElement.children).filter(
-          (el) => el.tagName === current.tagName
-        );
+      
+      // Ajouter nth-child si nécessaire pour unicité
+      const parent = current.parentElement;
+      if (parent) {
+        const siblings = Array.from(parent.children);
         if (siblings.length > 1) {
           const index = siblings.indexOf(current) + 1;
-          selector += `:nth-of-type(${index})`;
+          selector += `:nth-child(${index})`;
         }
       }
-
-      parts.unshift(selector);
-      current = current.parentElement;
-      attempts++;
+      
+      path.unshift(selector);
+      current = parent;
+      
+      // Limiter la profondeur
+      if (path.length >= 4) break;
     }
 
-    return parts.join(" > ");
+    return path.join(' > ');
   }
 
   // Gestionnaire de survol
   function handleMouseMove(e) {
     if (!isActive) return;
 
-    e.preventDefault();
-    e.stopPropagation();
-
-    currentElement = e.target;
-
-    // Ignorer l'overlay et le badge
-    if (currentElement.id === "section-scraper-overlay" || 
-        currentElement.id === "section-scraper-badge") {
+    // Ignorer les éléments de l'extension
+    if (e.target.id && e.target.id.startsWith('section-scraper-')) {
       return;
     }
 
+    currentElement = e.target;
     updateOverlay(currentElement);
   }
 
@@ -168,47 +195,77 @@
   function handleClick(e) {
     if (!isActive) return;
 
+    // Ignorer les éléments de l'extension
+    if (e.target.id && e.target.id.startsWith('section-scraper-')) {
+      return;
+    }
+
     e.preventDefault();
     e.stopPropagation();
+    e.stopImmediatePropagation();
 
-    if (currentElement && 
-        currentElement.id !== "section-scraper-overlay" && 
-        currentElement.id !== "section-scraper-badge") {
-      
+    if (currentElement) {
       const selector = generateSelector(currentElement);
+      console.log('[Section Scraper] Sélecteur généré:', selector);
       
-      // Sauvegarder dans le storage
-      chrome.storage.local.set({ selectedSelector: selector });
+      // Feedback visuel de confirmation
+      if (overlay) {
+        overlay.style.background = 'rgba(16, 185, 129, 0.25)';
+        overlay.style.borderColor = '#10b981';
+        overlay.style.borderWidth = '3px';
+      }
 
-      // Feedback visuel
-      overlay.style.background = "rgba(16, 185, 129, 0.3)";
-      overlay.style.borderColor = "#10b981";
+      // Sauvegarder le sélecteur
+      chrome.storage.local.set({ 
+        selectedSelector: selector,
+        timestamp: Date.now()
+      }, () => {
+        console.log('[Section Scraper] Sélecteur sauvegardé');
+        
+        // Notifier le popup
+        chrome.runtime.sendMessage({
+          type: 'SELECTOR_PICKED',
+          selector: selector
+        });
 
-      setTimeout(() => {
-        cleanup();
-      }, 300);
+        // Nettoyer après un court délai
+        setTimeout(() => {
+          cleanup();
+        }, 500);
+      });
     }
+
+    return false;
   }
 
   // Gestionnaire ESC
   function handleKeyDown(e) {
-    if (e.key === "Escape") {
+    if (e.key === 'Escape') {
+      e.preventDefault();
       cleanup();
     }
   }
 
   // Nettoyage
   function cleanup() {
+    console.log('[Section Scraper] Nettoyage');
     isActive = false;
-    document.removeEventListener("mousemove", handleMouseMove, true);
-    document.removeEventListener("click", handleClick, true);
-    document.removeEventListener("keydown", handleKeyDown, true);
+    
+    document.removeEventListener('mousemove', handleMouseMove, true);
+    document.removeEventListener('click', handleClick, true);
+    document.removeEventListener('keydown', handleKeyDown, true);
 
     if (overlay && overlay.parentNode) {
       overlay.parentNode.removeChild(overlay);
+      overlay = null;
     }
 
-    const badge = document.getElementById("section-scraper-badge");
+    if (tooltip && tooltip.parentNode) {
+      tooltip.parentNode.removeChild(tooltip);
+      tooltip = null;
+    }
+
+    const badge = document.getElementById('section-scraper-badge');
     if (badge && badge.parentNode) {
       badge.parentNode.removeChild(badge);
     }
@@ -218,23 +275,36 @@
 
   // Activation du mode sélection
   function activate() {
-    if (isActive) return;
+    console.log('[Section Scraper] Activation du mode sélection');
+    
+    if (isActive) {
+      console.log('[Section Scraper] Déjà actif, nettoyage puis réactivation');
+      cleanup();
+    }
 
+    window.__sectionScraperActive = true;
     isActive = true;
+    
     createOverlay();
+    createTooltip();
     createInfoBadge();
 
-    document.addEventListener("mousemove", handleMouseMove, true);
-    document.addEventListener("click", handleClick, true);
-    document.addEventListener("keydown", handleKeyDown, true);
+    // Ajouter les listeners avec capture pour priorité maximale
+    document.addEventListener('mousemove', handleMouseMove, true);
+    document.addEventListener('click', handleClick, true);
+    document.addEventListener('keydown', handleKeyDown, true);
+
+    console.log('[Section Scraper] Mode sélection activé');
   }
 
-  // Écouter les messages du popup
+  // Écouter les messages
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.type === "ACTIVATE_VISUAL_SELECTOR") {
+    if (message.type === 'ACTIVATE_VISUAL_SELECTOR') {
       activate();
       sendResponse({ success: true });
     }
     return true;
   });
+
+  console.log('[Section Scraper] Script visuel chargé');
 })();
