@@ -6,7 +6,7 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-  width: 400px;
+  width: 420px;
   background: #ffffff;
   color: #000000;
   line-height: 1.5;
@@ -16,7 +16,6 @@ body {
   background: #ffffff;
 }
 
-/* HEADER */
 .header {
   padding: 24px 20px 20px;
   border-bottom: 1px solid #e5e5e5;
@@ -36,12 +35,10 @@ body {
   font-weight: 400;
 }
 
-/* CONTENT */
 .content {
   padding: 20px;
 }
 
-/* MODE SELECTOR */
 .mode-selector {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -80,7 +77,6 @@ body {
   stroke: currentColor;
 }
 
-/* MODE CONTENT */
 .mode-content {
   margin-bottom: 20px;
 }
@@ -89,7 +85,6 @@ body {
   display: none;
 }
 
-/* VISUAL MODE */
 .visual-box {
   border: 1px solid #e5e5e5;
   border-radius: 8px;
@@ -133,7 +128,6 @@ body {
   stroke: currentColor;
 }
 
-/* SELECTED INFO */
 .selected-info {
   margin-top: 16px;
   padding: 16px;
@@ -193,7 +187,6 @@ body {
   stroke: currentColor;
 }
 
-/* MANUAL MODE */
 .input-wrapper {
   margin-bottom: 20px;
 }
@@ -230,14 +223,12 @@ body {
   color: #999999;
 }
 
-/* DIVIDER */
 .divider {
   height: 1px;
   background: #e5e5e5;
   margin: 20px 0;
 }
 
-/* OPTIONS */
 .options {
   margin-bottom: 20px;
 }
@@ -291,10 +282,9 @@ body {
   font-weight: 400;
 }
 
-/* ACTION BUTTONS */
 .action-buttons {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 10px;
   margin-bottom: 16px;
 }
@@ -349,7 +339,10 @@ body {
   flex-shrink: 0;
 }
 
-/* STATUS */
+.extract-btn.full-width {
+  grid-column: 1 / -1;
+}
+
 .status {
   margin-top: 16px;
   padding: 12px;
@@ -381,7 +374,6 @@ body {
   display: none !important;
 }
 
-/* PROGRESS */
 .progress {
   margin-top: 16px;
   height: 4px;
@@ -404,7 +396,6 @@ body {
   100% { width: 100%; }
 }
 
-/* FOOTER */
 .footer {
   padding: 16px 20px;
   text-align: center;
